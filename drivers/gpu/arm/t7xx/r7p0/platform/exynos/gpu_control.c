@@ -24,6 +24,9 @@
 #include "gpu_dvfs_handler.h"
 #include "gpu_control.h"
 
+unsigned int gpu_min_override = 100;
+unsigned int gpu_max_override = 852;
+
 static struct gpu_control_ops *ctr_ops;
 
 #ifdef CONFIG_MALI_RT_PM
@@ -122,6 +125,13 @@ int gpu_control_set_clock(struct kbase_device *kbdev, int clock)
 		return -1;
 	}
 #endif
+
+	if (clock) {
+		if (clock < gpu_min_override)
+			clock = gpu_min_override;
+		else if (clock > gpu_max_override)
+			clock = gpu_max_override;
+	}
 
 	is_up = prev_clock < clock;
 
