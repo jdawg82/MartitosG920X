@@ -229,7 +229,6 @@ static ssize_t show_asv_table(struct device *dev, struct device_attribute *attr,
 	return ret;
 }
 
-
 static ssize_t show_volt_table(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct exynos_context *platform = (struct exynos_context *)pkbdev->platform_context;
@@ -244,7 +243,7 @@ static ssize_t show_volt_table(struct device *dev, struct device_attribute *attr
 	pr_len = (size_t)((PAGE_SIZE - 2) / (min-max));
 
 	for (i = max; i <= min; i++) {
-		count += snprintf(&buf[count], pr_len, "%d %d\n", 
+		count += snprintf(&buf[count], pr_len, "%d %d\n",
 				platform->table[i].clock,
 				platform->table[i].voltage);
 	}
@@ -277,21 +276,22 @@ static ssize_t set_volt_table(struct device *dev, struct device_attribute *attr,
 	spin_lock_irqsave(&platform->gpu_dvfs_spinlock, flags);
 
 	if (tokens == 2 && target > -1) {
-		if ((rest = t[1] % GPU_VOLT_STEP) != 0) 
+		if ((rest = t[1] % GPU_VOLT_STEP) != 0)
 			t[1] += GPU_VOLT_STEP - rest;
-		
+
 		sanitize_min_max(t[1], GPU_MIN_VOLT, GPU_MAX_VOLT);
 		platform->table[target].voltage = t[1];
 	} else {
 		for (i = 0; i < tokens; i++) {
-			if ((rest = t[i] % GPU_VOLT_STEP) != 0) 
+			if ((rest = t[i] % GPU_VOLT_STEP) != 0)
 				t[i] += GPU_VOLT_STEP - rest;
-			
+
 			sanitize_min_max(t[i], GPU_MIN_VOLT, GPU_MAX_VOLT);
 			platform->table[i + max].voltage = t[i];
 		}
 	}
 
+	ipa_update();
 	spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
 
 	return count;

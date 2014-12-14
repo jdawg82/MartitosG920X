@@ -228,8 +228,6 @@ static ssize_t show_asv_table(struct device *dev, struct device_attribute *attr,
 
 	return ret;
 }
-
-
 static ssize_t show_volt_table(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct exynos_context *platform = (struct exynos_context *)pkbdev->platform_context;
@@ -292,6 +290,7 @@ static ssize_t set_volt_table(struct device *dev, struct device_attribute *attr,
 		}
 	}
 
+	ipa_update();
 	spin_unlock_irqrestore(&platform->gpu_dvfs_spinlock, flags);
 
 	return count;
