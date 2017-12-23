@@ -1995,13 +1995,6 @@ static struct global_attr cpu_util_gov_sys =
 static struct freq_attr cpu_util_gov_pol =
 	__ATTR(cpu_util, 0444, show_cpu_util_gov_pol, NULL);
 #endif
-#ifdef CONFIG_PMU_COREMEM_RATIO
-static struct global_attr region_time_in_state_gov_sys =
-	__ATTR(region_time_in_state, 0440, show_region_time_in_state_gov_sys, NULL);
-
-static struct freq_attr region_time_in_state_gov_pol =
-	__ATTR(region_time_in_state, 0440, show_region_time_in_state_gov_pol, NULL);
-#endif
 
 /* One Governor instance for entire system */
 static struct attribute *interactive_attributes_gov_sys[] = {
@@ -2031,9 +2024,6 @@ static struct attribute *interactive_attributes_gov_sys[] = {
 	&single_cluster0_min_freq_gov_sys.attr,
 	&multi_cluster0_min_freq_gov_sys.attr,
 	&cpu_util_gov_sys.attr,
-#endif
-#ifdef CONFIG_PMU_COREMEM_RATIO
-	&region_time_in_state_gov_sys.attr,
 #endif
 	NULL,
 };
@@ -2071,9 +2061,6 @@ static struct attribute *interactive_attributes_gov_pol[] = {
 	&single_cluster0_min_freq_gov_pol.attr,
 	&multi_cluster0_min_freq_gov_pol.attr,
 	&cpu_util_gov_pol.attr,
-#endif
-#ifdef CONFIG_PMU_COREMEM_RATIO
-	&region_time_in_state_gov_pol.attr,
 #endif
 	NULL,
 };
