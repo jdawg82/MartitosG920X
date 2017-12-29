@@ -18,13 +18,9 @@ config SUSPEND_FREEZER
 
 	  Turning OFF this setting is NOT recommended! If in doubt, say Y.
 
-config HAS_WAKELOCK
-	bool
-	default y
-
 config POWERSUSPEND
 	bool "Power suspend"
-	default n
+	default y
 	---help---
 	  Call early suspend handlers when the user requested sleep state
 	  changes.
@@ -34,6 +30,10 @@ config POWERSUSPEND_DEBUG
 	depends on POWERSUSPEND
 	help
 	  Output debugging info in dmesg [POWERSUSPEND] (Yank555.lu)
+
+config HAS_WAKELOCK
+	bool
+	default y
 
 config WAKELOCK
 	bool
@@ -346,3 +346,8 @@ config	BOEFFLA_WL_BLOCKER
 	bool "Boeffla generic wakelock blocker driver"
 	depends on PM
 	default N
+
+config PM_SYNC_BEFORE_SUSPEND
+	bool "Sync file systems before suspend"
+	depends on PM
+	default y
