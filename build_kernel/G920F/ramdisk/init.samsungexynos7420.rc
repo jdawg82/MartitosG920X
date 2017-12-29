@@ -888,19 +888,6 @@ service taa_service /system/bin/taadaemon
     group system
     disabled
 
-# ApexServer
-service apexserver /system/bin/apexserver
-	class main
-	user system
-	group system graphics drmrpc media media_rw m2mscaler
-	disabled
-	
-# AIR
-service visiond /system/bin/visiond
-    class main
-    user system
-    group system camera media media_rw
-
 on property:sys.tzdaemon=Ready
     start taa_service
 
