@@ -261,8 +261,8 @@ on boot
     chmod 0660 /sys/devices/system/cpu/cpu0/cpufreq/interactive/multi_cluster0_min_freq
 
     # Assume HMP uses shared cpufreq policy for all LITTLE CPUs
-    chown system system /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
-    chmod 0660 /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+    chown root root /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
+    chmod 0640 /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq
 
     chown system system sys/devices/system/cpu/cpufreq/mp-cpufreq/cluster0_max_freq
     chmod 0660 sys/devices/system/cpu/cpufreq/mp-cpufreq/cluster0_max_freq
@@ -323,8 +323,8 @@ on boot
     chmod 0660 /sys/devices/system/cpu/cpu4/cpufreq/interactive/multi_cluster0_min_freq
 
     # Assume HMP uses shared cpufreq policy for big CPUs
-    chown system system /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
-    chmod 0660 /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+    chown root root /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
+    chmod 0640 /sys/devices/system/cpu/cpu4/cpufreq/scaling_max_freq
 
     # LITTLE cluster high load
     chown system system /sys/class/sec/sec_slow/timer_rate
@@ -413,7 +413,7 @@ on boot
     chmod 6755 /system/bin/dmm_v2
 
 # SSWAP
-    write /proc/sys/vm/swappiness 200
+    write /proc/sys/vm/swappiness 190
 
 #MST HW Support
     setprop ro.mst.support 1
@@ -893,3 +893,16 @@ on property:sys.tzdaemon=Ready
 
 on property:init.svc.tz_service=stopped
     setprop sys.tzdaemon NotReady
+
+# AIR
+service visiond /system/bin/visiond
+    class main
+    user system
+    group system camera media media_rw
+
+# ApexServer
+service apexserver /system/bin/apexserver
+	class main
+	user system
+	group system graphics drmrpc media media_rw m2mscaler
+	disabled
