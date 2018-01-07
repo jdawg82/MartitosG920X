@@ -1587,7 +1587,7 @@ unsigned int hmp_up_threshold = 479;
 unsigned int hmp_down_threshold = 214;
 
 unsigned int hmp_semiboost_up_threshold = 400;
-unsigned int hmp_semiboost_down_threshold = 150;
+unsigned int hmp_semiboost_down_threshold = 175;
 
 /*
  * Needed to determine heaviest tasks etc.
