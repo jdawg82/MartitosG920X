@@ -57,6 +57,7 @@ static DEFINE_SPINLOCK(vnswap_original_bio_lock);
 
 void vnswap_init_disksize(u64 disksize)
 {
+	int i;
 	vnswap_device->disksize = PAGE_ALIGN(disksize);
 	if ((vnswap_device->disksize/PAGE_SIZE > MAX_SWAP_AREA_SIZE_PAGES) ||
 		!vnswap_device->disksize) {
@@ -69,6 +70,16 @@ void vnswap_init_disksize(u64 disksize)
 	set_capacity(vnswap_device->disk,
 		vnswap_device->disksize >> SECTOR_SHIFT);
 
+	vnswap_table = vmalloc((vnswap_device->disksize/PAGE_SIZE) *
+					sizeof(int));
+	if (vnswap_table == NULL) {
+		pr_err("%s %d: alloc vnswap_table is failed.\n",
+				__func__, __LINE__);
+		vnswap_device->init_success = VNSWAP_INIT_DISKSIZE_FAIL;
+		return;
+	}
+	for (i = 0; i < vnswap_device->disksize/PAGE_SIZE; i++)
+		vnswap_table[i] = -1;
 	vnswap_device->init_success = VNSWAP_INIT_DISKSIZE_SUCCESS;
 }
 
@@ -125,18 +136,6 @@ int vnswap_init_backing_storage(void)
 				ret, vnswap_device->backing_storage_filename);
 	}
 
-	/* initialize vnswap_table */
-	vnswap_table = vmalloc((vnswap_device->disksize / PAGE_SIZE) *
-				sizeof(int));
-	if (vnswap_table == NULL) {
-		pr_err("%s %d: alloc vnswap_table failed\n",
-			__func__, __LINE__);
-		ret = -ENOMEM;
-		goto error;
-	}
-	for (i = 0; i < vnswap_device->disksize / PAGE_SIZE; i++)
-		vnswap_table[i] = -1;
-
 	mapping = backing_storage_file->f_mapping;
 	inode = mapping->host;
 	backing_storage_bdev = inode->i_sb->s_bdev;
@@ -185,15 +184,14 @@ int vnswap_init_backing_storage(void)
 	*/
 	if (vnswap_device->bs_size % (sizeof(unsigned long)*8) != 0) {
 		dprintk("%s %d: backing storage size is misaligned " \
-				"(%d page align)." \
+				"(32 page align)." \
 				"So, it is truncated from %llu pages to %llu pages\n",
-				__func__, __LINE__,
-				sizeof(unsigned long) * 8,
-				vnswap_device->bs_size,
-				vnswap_device->bs_size / ((sizeof(unsigned long) * 8) *
-					(sizeof(unsigned long) * 8)));
-		vnswap_device->bs_size = vnswap_device->bs_size /
-		((sizeof(unsigned long) * 8) * (sizeof(unsigned long) * 8));
+				__func__, __LINE__, vnswap_device->bs_size,
+				vnswap_device->bs_size /
+				(sizeof(unsigned long)*8)*
+				(sizeof(unsigned long)*8));
+		vnswap_device->bs_size = (vnswap_device->bs_size /
+			(sizeof(unsigned long)*8) * (sizeof(unsigned long)*8));
 	}
 
 	backing_storage_bitmap = vmalloc(vnswap_device->bs_size / 8);
@@ -202,7 +200,7 @@ int vnswap_init_backing_storage(void)
 		goto close_file;
 	}
 
-	for (i = 0; i < vnswap_device->bs_size / (8 * sizeof(unsigned long)); i++)
+	for (i = 0; i < vnswap_device->bs_size / 32; i++)
 		backing_storage_bitmap[i] = 0;
 	backing_storage_bitmap_last_allocated_index = -1;
 
@@ -306,36 +304,6 @@ error:
 	if (vnswap_device)
 		vnswap_device->init_success |= VNSWAP_INIT_BACKING_STORAGE_FAIL;
 	return ret;
-}
-
-int vnswap_deinit_backing_storage(void)
-{
-	struct address_space *mapping;
-	int stored_pages = atomic_read(&vnswap_device->stats.vnswap_stored_pages);
-
-	if (backing_storage_file && !stored_pages) {
-		vnswap_device->init_success &= ~VNSWAP_INIT_BACKING_STORAGE_SUCCESS;
-		vnswap_device->bs_size = 0;
-		vnswap_device->stats.vnswap_total_slot_num = 0;
-
-		mapping = backing_storage_file->f_mapping;
-		if (mapping && mapping->host && mapping->host->i_flags)
-			mapping->host->i_flags &= ~S_IMMUTABLE;
-
-		filp_close(backing_storage_file, NULL);
-		backing_storage_file = NULL;
-
-		if (backing_storage_bitmap) {
-			vfree(backing_storage_bitmap);
-			backing_storage_bitmap = NULL;
-		}
-
-		if (backing_storage_bmap) {
-			vfree(backing_storage_bmap);
-			backing_storage_bmap = NULL;
-		}
-	}
-	return 0;
 }
 
 /* find free area (nand_offset, page_offset) in backing storage */
@@ -679,7 +647,7 @@ int vnswap_bvec_read(struct vnswap *vnswap, struct bio_vec *bvec,
 		return 0;
 	}
 
-	spin_lock_irq(&vnswap_table_lock);
+	spin_lock(&vnswap_table_lock);
 	nand_offset = vnswap_table[index];
 	if (nand_offset == -1) {
 		pr_err("%s %d: vnswap_table is not mapped. " \
@@ -692,7 +660,7 @@ int vnswap_bvec_read(struct vnswap *vnswap, struct bio_vec *bvec,
 		spin_unlock(&vnswap_table_lock);
 		goto out;
 	}
-	spin_unlock_irq(&vnswap_table_lock);
+	spin_unlock(&vnswap_table_lock);
 
 	dprintk("%s %d: (index, nand_offset) = (%d, %d)\n",
 			__func__, __LINE__, index, nand_offset);
@@ -723,7 +691,7 @@ int vnswap_bvec_write(struct vnswap *vnswap, struct bio_vec *bvec,
 		return 0;
 	}
 
-	spin_lock_irq(&vnswap_table_lock);
+	spin_lock(&vnswap_table_lock);
 	nand_offset = vnswap_table[index];
 
 	/* duplicate write - remove existing mapping */
@@ -740,24 +708,24 @@ int vnswap_bvec_write(struct vnswap *vnswap, struct bio_vec *bvec,
 
 	ret = vnswap_find_free_area_in_backing_storage(&nand_offset);
 	if (ret < 0) {
-		spin_unlock_irq(&vnswap_table_lock);
+		spin_unlock(&vnswap_table_lock);
 		return ret;
 	}
 	set_bit(nand_offset, backing_storage_bitmap);
 	vnswap_table[index] = nand_offset;
 	atomic_inc(&vnswap_device->stats.
 		vnswap_used_slot_num);
-	spin_unlock_irq(&vnswap_table_lock);
+	spin_unlock(&vnswap_table_lock);
 
 	dprintk("%s %d: (index, nand_offset) = (%d, %d)\n",
 			__func__, __LINE__, index, nand_offset);
 	ret = vnswap_submit_bio(1, nand_offset, page, bio);
 
 	if (ret) {
-		spin_lock_irq(&vnswap_table_lock);
+		spin_lock(&vnswap_table_lock);
 		clear_bit(nand_offset, backing_storage_bitmap);
 		vnswap_table[index] = -1;
-		spin_unlock_irq(&vnswap_table_lock);
+		spin_unlock(&vnswap_table_lock);
 	}
 
 	return ret;
@@ -944,15 +912,21 @@ void vnswap_slot_free_notify(struct block_device *bdev, unsigned long index)
 
 	vnswap = bdev->bd_disk->private_data;
 
-	spin_lock_irq(&vnswap_table_lock);
-	nand_offset = vnswap_table ? vnswap_table[index] : -1;
+	spin_lock(&vnswap_table_lock);
+	nand_offset = vnswap_table[index];
 
 	/* This index is not mapped to vnswap and is mapped to zswap */
 	if (nand_offset == -1) {
 		atomic_inc(&vnswap_device->stats.
 			vnswap_not_mapped_slot_free_num);
-		spin_unlock_irq(&vnswap_table_lock);
+		spin_unlock(&vnswap_table_lock);
 		return;
+	}
+
+	if (unlikely(!backing_storage_bitmap)) {
+		pr_err("%s %d: invalid request - index=%lu\n",
+					__func__, __LINE__, index);
+		BUG();
 	}
 
 	atomic_inc(&vnswap_device->stats.
@@ -969,7 +943,7 @@ void vnswap_slot_free_notify(struct block_device *bdev, unsigned long index)
 		vnswap_device->bs_size) {
 		backing_storage_bitmap_last_allocated_index = nand_offset;
 	}
-	spin_unlock_irq(&vnswap_table_lock);
+	spin_unlock(&vnswap_table_lock);
 
 	/*
 	 * disable blkdev_issue_discard

@@ -66,7 +66,6 @@ struct vnswap_stats {
 		/* total double mapped slot number */
 	atomic_t vnswap_read_pages;	/* total read pages */
 	atomic_t vnswap_write_pages;	/* total write pages */
-	atomic_t vnswap_daily_write;
 	atomic_t vnswap_bio_end_fail_r1_num;
 		/* total bio_end fail pages */
 	atomic_t vnswap_bio_end_fail_r2_num;
@@ -109,7 +108,6 @@ struct vnswap {
 
 extern void vnswap_init_disksize(u64 disksize);
 extern int vnswap_init_backing_storage(void);
-extern int vnswap_deinit_backing_storage(void);
 
 extern struct vnswap *vnswap_device;
 extern struct block_device *backing_storage_bdev;
