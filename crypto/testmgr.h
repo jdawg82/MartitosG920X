@@ -26972,7 +26972,7 @@ struct comp_testvec {
 };
 
 struct pcomp_testvec {
-	const void *params;
+	void *params;
 	unsigned int paramsize;
 	int inlen, outlen;
 	char input[COMP_BUF_SIZE];
