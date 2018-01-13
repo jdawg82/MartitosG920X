@@ -882,7 +882,7 @@ static struct notifier_block exynos_dm_hotplug_reboot_nb = {
 static void update_nr_running_count(void)
 {
 	int ret = 0;
-	cur_nr_running = (avg_nr_running() * 100) >> FSHIFT;
+	cur_nr_running = nr_running();
 
 	if (cur_nr_running >= nr_running_threshold) {
 		if (nr_running_count < nr_running_range)

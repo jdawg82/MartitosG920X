@@ -33,6 +33,7 @@
 #include <linux/slab.h>
 #include <linux/pm_qos.h>
 #include <linux/state_notifier.h>
+
 static struct notifier_block interactive_state_notif;
 
 #ifdef CONFIG_ARM_EXYNOS_MP_CPUFREQ
@@ -83,7 +84,7 @@ static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 #define DOWN_LOW_LOAD_THRESHOLD 6
 
 #define DEFAULT_TIMER_RATE (20 * USEC_PER_MSEC)
-#define SCREEN_OFF_TIMER_RATE ((unsigned long)(60 * USEC_PER_MSEC))
+#define SCREEN_OFF_TIMER_RATE ((unsigned long)(35 * USEC_PER_MSEC))
 #define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_TIMER_RATE
 static unsigned int default_above_hispeed_delay[] = {
 	DEFAULT_ABOVE_HISPEED_DELAY };
@@ -647,10 +648,10 @@ static void cpufreq_interactive_timer(unsigned long data)
 	cpu_load = loadadjfreq / pcpu->policy->cur;
 	tunables->boosted = tunables->boost_val || now < tunables->boostpulse_endtime;
 	
-	if (screen_on
+	if (!state_suspended
 		&& tunables->timer_rate != tunables->prev_timer_rate)
 		tunables->timer_rate = tunables->prev_timer_rate;
-	else if (!screen_on
+	else if (state_suspended
 		&& tunables->timer_rate != SCREEN_OFF_TIMER_RATE) {
 		tunables->prev_timer_rate = tunables->timer_rate;
 		tunables->timer_rate
