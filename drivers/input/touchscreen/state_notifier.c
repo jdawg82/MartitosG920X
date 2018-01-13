@@ -91,7 +91,7 @@ static void _resume_work(struct work_struct *work)
 void state_suspend(void)
 {
 	dprintk("%s: suspend called.\n", STATE_NOTIFIER);
-	if (state_suspended || suspend_in_progress || !enabled)
+	if (state_suspended || suspend_in_progress)
 		return;
 
 	suspend_in_progress = true;
