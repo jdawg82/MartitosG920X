@@ -256,8 +256,7 @@ static void arizona_jds_start_timeout(struct arizona_extcon_info *info)
 	if (state->timeout_ms && state->timeout) {
 		int ms = state->timeout_ms(info);
 
-		queue_delayed_work(system_power_efficient_wq,
-				      &info->state_timeout_work,
+		schedule_delayed_work(&info->state_timeout_work,
 				      msecs_to_jiffies(ms));
 	}
 }
@@ -2416,8 +2415,7 @@ static void arizona_micd_input_clear(struct work_struct *work)
 
 	mutex_lock(&info->lock);
 	if (info->first_clear) {
-		queue_delayed_work(system_power_efficient_wq,
-				      &info->micd_clear_work,
+		schedule_delayed_work(&info->micd_clear_work,
 				      msecs_to_jiffies(900));
 		info->first_clear = false;
 	}
@@ -2443,8 +2441,7 @@ static irqreturn_t arizona_micdet(int irq, void *data)
 	case WM5110:
 		if (arizona->rev < 6) {
 			info->first_clear = true;
-			queue_delayed_work(system_power_efficient_wq,
-					      &info->micd_clear_work,
+			schedule_delayed_work(&info->micd_clear_work,
 					      msecs_to_jiffies(80));
 		}
 		break;
@@ -2455,9 +2452,8 @@ static irqreturn_t arizona_micdet(int irq, void *data)
 	mutex_unlock(&info->lock);
 
 	if (debounce)
-		queue_delayed_work(system_power_efficient_wq,
-				   &info->micd_detect_work,
-				   msecs_to_jiffies(debounce));
+		schedule_delayed_work(&info->micd_detect_work,
+				      msecs_to_jiffies(debounce));
 	else
 		arizona_micd_handler(&info->micd_detect_work.work);
 
@@ -2640,8 +2636,7 @@ static irqreturn_t arizona_jackdet(int irq, void *data)
 	if (val == info->last_jackdet) {
 		dev_dbg(arizona->dev, "Suppressing duplicate JACKDET\n");
 		if (cancelled_hp)
-			queue_delayed_work(system_power_efficient_wq,
-					      &info->hpdet_work,
+			schedule_delayed_work(&info->hpdet_work,
 					      msecs_to_jiffies(HPDET_DEBOUNCE));
 
 		if (cancelled_state)
@@ -2709,9 +2704,8 @@ static irqreturn_t arizona_jackdet(int irq, void *data)
 
 			arizona_jds_start_timeout(info);
 		} else {
-			queue_delayed_work(system_power_efficient_wq,
-					   &info->hpdet_work,
-					   msecs_to_jiffies(HPDET_DEBOUNCE));
+			schedule_delayed_work(&info->hpdet_work,
+					      msecs_to_jiffies(HPDET_DEBOUNCE));
 		}
 
 		regmap_update_bits(arizona->regmap, reg, mask, 0);
